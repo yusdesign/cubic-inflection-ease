@@ -291,7 +291,6 @@
             // --- Animation time ---
             let t = (frameCount * 0.008 * speed) % 1.0;
             const easeFn = EasingFunctions[easingType];
-            const isWeighted = easingType === 'cubicInflection';
             
             // Get derivatives
             const deriv = calculateDerivatives(easeFn, t, weight);
@@ -307,12 +306,10 @@
             const circleY = height - 60;
             const xPos = margin.left + eased * graphWidth;
             
-            // Color based on velocity
             const hue = 180 + 40 * (eased > 0.5 ? 1 : 0);
             const size = 28 + 12 * (1 - abs(t - weight) * 2);
             const brightness = 60 + 30 * (1 - abs(eased - weight) * 2);
             
-            // Glow effect
             noStroke();
             for (let i = 5; i > 0; i--) {
                 const alpha = 20 / (i + 1);
@@ -324,8 +321,9 @@
             noStroke();
             circle(xPos, circleY, size);
             
-            // --- 2. EASING CURVE ---
+            // --- 2. EASING CURVE (FIXED) ---
             if (showPath) {
+                // Draw the easing curve
                 stroke(100, 100, 200, 80);
                 strokeWeight(2);
                 noFill();
@@ -337,11 +335,26 @@
                 }
                 endShape();
                 
-                // --- MOVING YELLOW POINT ON CURVE (FIXED!) ---
+                // --- MOVING YELLOW POINT ON CURVE ---
                 let curveX = margin.left + eased * graphWidth;
                 let curveY = graphY + graphHeight - eased * graphHeight;
                 
-                // Glow trail for yellow point
+                // Trail dots (drawn BEHIND the main point)
+                for (let i = 1; i <= 12; i++) {
+                    let trailT = (t - i * 0.008 * speed) % 1.0;
+                    if (trailT < 0) trailT += 1.0;
+                    let trailEased = easeFn(trailT, weight);
+                    let trailX = margin.left + trailEased * graphWidth;
+                    let trailY = graphY + graphHeight - trailEased * graphHeight;
+                    
+                    let alpha = map(i, 1, 12, 60, 5);
+                    fill(255, 200, 100, alpha);
+                    noStroke();
+                    let dotSize = map(i, 1, 12, 6, 2);
+                    circle(trailX, trailY, dotSize);
+                }
+                
+                // Glow for yellow point (3 layers)
                 for (let i = 3; i > 0; i--) {
                     const alpha = 30 / (i + 1);
                     fill(255, 200, 100, alpha);
@@ -349,28 +362,15 @@
                     circle(curveX, curveY, 8 + i * 8);
                 }
                 
-                // Bright yellow point
+                // Main bright yellow point (ON TOP)
                 fill(255, 220, 50);
                 noStroke();
-                circle(curveX, curveY, 8);
+                circle(curveX, curveY, 10);
                 
                 // Connection line from circle to curve
                 stroke(255, 200, 100, 120);
                 strokeWeight(1.5);
                 line(xPos, circleY, curveX, curveY);
-                
-                // Small trail dots behind the yellow point
-                stroke(255, 200, 100, 40);
-                strokeWeight(1);
-                noFill();
-                for (let i = 1; i <= 8; i++) {
-                    let trailT = (t - i * 0.005 * speed) % 1.0;
-                    if (trailT < 0) trailT += 1.0;
-                    let trailEased = easeFn(trailT, weight);
-                    let trailX = margin.left + trailEased * graphWidth;
-                    let trailY = graphY + graphHeight - trailEased * graphHeight;
-                    circle(trailX, trailY, 2 + i * 0.5);
-                }
             }
             
             // --- 3. INFLECTION MARKER ---
@@ -382,31 +382,26 @@
             noStroke();
             circle(inflectionX, graphY + graphHeight - weight * graphHeight, 8);
             
-            // --- 4. DERIVATIVES (Velocity & Acceleration) ---
+            // --- 4. DERIVATIVES ---
             if (showDerivatives) {
-                // Velocity graph (below main curve)
                 const velHeight = 80;
                 const velY = graphY + graphHeight + 15;
                 const velNorm = map(deriv.velocity, -3, 3, 0, velHeight);
                 const velClamped = constrain(velNorm, 0, velHeight);
                 
-                // Velocity bar
                 fill(100, 255, 150, 80);
                 noStroke();
                 rect(margin.left + 5, velY + velHeight - velClamped, graphWidth - 10, velClamped);
                 
-                // Velocity line
                 stroke(100, 255, 150, 150);
                 strokeWeight(2);
                 line(margin.left, velY + velHeight/2, margin.left + graphWidth, velY + velHeight/2);
                 
-                // Velocity indicator on the bar
                 let velIndicatorX = margin.left + eased * graphWidth;
                 fill(100, 255, 150, 200);
                 noStroke();
                 circle(velIndicatorX, velY + velHeight - velClamped, 6);
                 
-                // Acceleration dot
                 const accHeight = 50;
                 const accY = velY + velHeight + 15;
                 const accNorm = map(deriv.acceleration, -10, 10, 0, accHeight);
@@ -416,7 +411,6 @@
                 noStroke();
                 circle(margin.left + eased * graphWidth, accY + accHeight - accClamped, 8);
                 
-                // Labels
                 fill(100, 255, 150, 180);
                 noStroke();
                 textSize(10);
@@ -428,7 +422,6 @@
             // --- 5. GRID & LABELS ---
             stroke(40, 40, 80, 60);
             strokeWeight(1);
-            // Horizontal grid
             for (let i = 0; i <= 4; i++) {
                 let yPos = graphY + (i / 4) * graphHeight;
                 line(margin.left, yPos, margin.left + graphWidth, yPos);
@@ -438,7 +431,6 @@
                 text((1 - i/4).toFixed(1), margin.left - 30, yPos + 3);
             }
             
-            // Vertical grid
             for (let i = 0; i <= 10; i++) {
                 let xPos = margin.left + (i / 10) * graphWidth;
                 line(xPos, graphY, xPos, graphY + graphHeight);
