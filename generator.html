@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✦ Cubic Inflection — Preview Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d0d2b;
+            color: #a8b2d1;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 { color: #64ffda; font-size: 28px; margin-bottom: 8px; }
+        .subtitle { color: #8892b0; font-size: 14px; margin-bottom: 30px; }
+        .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 25px; }
+        .actions button {
+            background: #64ffda; color: #0d0d2b; border: none;
+            padding: 10px 24px; border-radius: 8px; cursor: pointer;
+            font-size: 14px; font-weight: 600;
+        }
+        .actions button:hover { background: #52d1b0; }
+        .actions button.secondary { background: #1a1a3e; color: #64ffda; }
+        .actions button.secondary:hover { background: #2a2a5e; }
+        .status { color: #64ffda; font-size: 14px; margin-bottom: 20px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid #0f3460;
+        }
+        .card h3 { color: #64ffda; font-size: 13px; margin-bottom: 8px; }
+        .card canvas { width: 100%; height: auto; border-radius: 6px; background: #0d0d2b; }
+        .card .info {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 8px; font-size: 12px; color: #8892b0;
+        }
+        .card .info button {
+            background: #64ffda; color: #0d0d2b; border: none;
+            padding: 3px 12px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; font-weight: 600;
+        }
+        .card .info button:hover { background: #52d1b0; }
+        .download-all {
+            background: #f7b731; color: #0d0d2b; border: none;
+            padding: 12px 32px; border-radius: 8px; cursor: pointer;
+            font-size: 16px; font-weight: 700; margin: 25px 0;
+            display: none;
+        }
+        .download-all:hover { background: #e6a82a; }
+        .footer { color: #8892b0; font-size: 12px; margin-top: 20px; }
+        .footer a { color: #64ffda; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<h1>✦ Cubic Inflection</h1>
+<p class="subtitle">Generate PNG preview images for After Effects panel</p>
+
+<div class="actions">
+    <button onclick="generateAll()">🔄 Generate All Previews</button>
+    <button class="secondary" onclick="downloadAll()">📦 Download All (ZIP)</button>
+</div>
+
+<div id="status" class="status">Click "Generate All Previews"</div>
+<div id="grid" class="grid"></div>
+<button id="downloadAllBtn" class="download-all" onclick="downloadAll()">⬇️ Download All Images (ZIP)</button>
+
+<p class="footer">
+    Place generated PNGs next to your AE script: <code>CubicInflectionPanel.jsx</code>
+</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>
+// --- Cubic Inflection ---
+function cubicInflection(t, w) {
+    const c = t - w;
+    return Math.pow(c, 3) * 4 + w;
+}
+
+// --- Draw preview ---
+function drawPreview(canvas, weight) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const m = 20;
+    const gW = W - m * 2, gH = H - m * 2 - 16;
+
+    ctx.fillStyle = '#0d0d2b';
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(50,50,100,0.4)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 10; i++) {
+        const x = m + (i / 10) * gW;
+        ctx.beginPath(); ctx.moveTo(x, m); ctx.lineTo(x, m + gH); ctx.stroke();
+        const y = m + (i / 10) * gH;
+        ctx.beginPath(); ctx.moveTo(m, y); ctx.lineTo(m + gW, y); ctx.stroke();
+    }
+
+    // Curve
+    ctx.strokeStyle = '#64ffda';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+        const t = i / 200;
+        const e = cubicInflection(t, weight);
+        const x = m + t * gW;
+        const y = m + gH - e * gH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Inflection point
+    const iX = m + weight * gW;
+    const iY = m + gH - weight * gH;
+    ctx.fillStyle = '#00ffcc';
+    ctx.beginPath();
+    ctx.arc(iX, iY, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Start/end
+    ctx.fillStyle = 'rgba(200,200,200,0.4)';
+    ctx.beginPath(); ctx.arc(m, m + gH, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(m + gW, m, 4, 0, Math.PI * 2); ctx.fill();
+
+    // Dot at t=0.5
+    const mt = 0.5;
+    const me = cubicInflection(mt, weight);
+    const dx = m + mt * gW;
+    const dy = m + gH - me * gH;
+
+    const grad = ctx.createRadialGradient(dx, dy, 0, dx, dy, 14);
+    grad.addColorStop(0, 'rgba(255,200,50,0.5)');
+    grad.addColorStop(1, 'rgba(255,200,50,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(dx, dy, 14, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#ffcc33';
+    ctx.beginPath(); ctx.arc(dx, dy, 6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(dx, dy, 2, 0, Math.PI * 2); ctx.fill();
+
+    // Progress line
+    ctx.strokeStyle = 'rgba(255,200,50,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(dx, m + gH); ctx.lineTo(dx, m); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Labels
+    ctx.fillStyle = '#64ffda';
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Weight: ' + weight.toFixed(2), 8, H - 8);
+
+    ctx.fillStyle = '#8892b0';
+    ctx.textAlign = 'right';
+    ctx.fillText('t: 0.50  eased: ' + me.toFixed(2), W - 8, H - 8);
+}
+
+// --- Generate all ---
+const generated = {};
+const weights = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+const presetNames = {
+    0.2: 'Sharp',
+    0.3: 'Ease In',
+    0.4: 'Soft In',
+    0.5: 'Smooth',
+    0.6: 'Soft Out',
+    0.7: 'Ease Out',
+    0.8: 'Strong Out',
+    0.9: 'Extreme Out'
+};
+
+function generateAll() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    const status = document.getElementById('status');
+
+    weights.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const title = document.createElement('h3');
+        title.textContent = 'Weight: ' + w.toFixed(2) + ' — ' + (presetNames[w] || '');
+        card.appendChild(title);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 340;
+        canvas.height = 136;
+        canvas.id = 'preview_' + w.toFixed(2);
+        drawPreview(canvas, w);
+        card.appendChild(canvas);
+
+        const info = document.createElement('div');
+        info.className = 'info';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = presetNames[w] || 'Custom';
+
+        const btn = document.createElement('button');
+        btn.textContent = '⬇ PNG';
+        btn.onclick = (function(weight) {
+            return function() {
+                const c = document.getElementById('preview_' + weight.toFixed(2));
+                const link = document.createElement('a');
+                link.download = 'preview_' + weight.toFixed(2) + '.png';
+                link.href = c.toDataURL('image/png');
+                link.click();
+            };
+        })(w);
+
+        info.appendChild(nameSpan);
+        info.appendChild(btn);
+        card.appendChild(info);
+        grid.appendChild(card);
+
+        generated['preview_' + w.toFixed(2) + '.png'] = canvas.toDataURL('image/png');
+    });
+
+    status.textContent = '✅ Generated ' + weights.length + ' previews!';
+    document.getElementById('downloadAllBtn').style.display = 'block';
+}
+
+// --- Download ZIP ---
+function downloadAll() {
+    const zip = new JSZip();
+    let count = 0;
+    for (const name in generated) {
+        const data = generated[name].split(',')[1];
+        zip.file(name, data, { base64: true });
+        count++;
+    }
+    zip.generateAsync({ type: 'blob' }).then(function(content) {
+        saveAs(content, 'cubic_inflection_previews.zip');
+    });
+    document.getElementById('status').textContent = '📦 Downloading ' + count + ' images...';
+}
+
+// --- Auto-run ---
+window.onload = generateAll;
+</script>
+</body>
+</html>
