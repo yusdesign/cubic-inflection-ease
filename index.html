@@ -262,6 +262,20 @@
         });
         showDerivativesCheck.addEventListener('change', (e) => { showDerivatives = e.target.checked; });
         showPathCheck.addEventListener('change', (e) => { showPath = e.target.checked; });
+
+        function getEasingColor(type) {
+            const colors = {
+                'cubicInflection': [255, 200, 100],
+                'easeInOutCubic': [100, 200, 255],
+                'easeInOutQuad': [100, 255, 200],
+                'easeInOutQuart': [200, 100, 255],
+                'easeInOutQuint': [255, 100, 200],
+                'easeInOutExpo': [255, 200, 100],
+                'easeOutBack': [255, 100, 100],
+                'easeInOutElastic': [100, 255, 100]
+            };
+            return colors[type] || [255, 200, 100];
+        }
         
         function setup() {
             const canvas = createCanvas(900, 500);
@@ -323,14 +337,40 @@
                 }
                 endShape();
                 
-                // Current position on curve
+                // --- MOVING YELLOW POINT ON CURVE (FIXED!) ---
+                let curveX = margin.left + eased * graphWidth;
                 let curveY = graphY + graphHeight - eased * graphHeight;
-                stroke(255, 200, 100, 150);
-                strokeWeight(2);
-                line(xPos, circleY, xPos, curveY);
-                fill(255, 200, 100);
+                
+                // Glow trail for yellow point
+                for (let i = 3; i > 0; i--) {
+                    const alpha = 30 / (i + 1);
+                    fill(255, 200, 100, alpha);
+                    noStroke();
+                    circle(curveX, curveY, 8 + i * 8);
+                }
+                
+                // Bright yellow point
+                fill(255, 220, 50);
                 noStroke();
-                circle(xPos, curveY, 6);
+                circle(curveX, curveY, 8);
+                
+                // Connection line from circle to curve
+                stroke(255, 200, 100, 120);
+                strokeWeight(1.5);
+                line(xPos, circleY, curveX, curveY);
+                
+                // Small trail dots behind the yellow point
+                stroke(255, 200, 100, 40);
+                strokeWeight(1);
+                noFill();
+                for (let i = 1; i <= 8; i++) {
+                    let trailT = (t - i * 0.005 * speed) % 1.0;
+                    if (trailT < 0) trailT += 1.0;
+                    let trailEased = easeFn(trailT, weight);
+                    let trailX = margin.left + trailEased * graphWidth;
+                    let trailY = graphY + graphHeight - trailEased * graphHeight;
+                    circle(trailX, trailY, 2 + i * 0.5);
+                }
             }
             
             // --- 3. INFLECTION MARKER ---
@@ -359,6 +399,12 @@
                 stroke(100, 255, 150, 150);
                 strokeWeight(2);
                 line(margin.left, velY + velHeight/2, margin.left + graphWidth, velY + velHeight/2);
+                
+                // Velocity indicator on the bar
+                let velIndicatorX = margin.left + eased * graphWidth;
+                fill(100, 255, 150, 200);
+                noStroke();
+                circle(velIndicatorX, velY + velHeight - velClamped, 6);
                 
                 // Acceleration dot
                 const accHeight = 50;
