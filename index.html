@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Easing Visualizer - Cubic Inflection & More</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            border: 1px solid #0f3460;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: #1a1a3e;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #2a2a5e;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #a8b2d1;
+            font-size: 14px;
+        }
+        .control-group label {
+            font-weight: 600;
+            color: #64ffda;
+            min-width: 60px;
+        }
+        input[type="range"] {
+            width: 120px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #2a2a5e;
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #64ffda;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #64ffda;
+            cursor: pointer;
+            border: none;
+        }
+        select {
+            background: #1a1a3e;
+            color: #a8b2d1;
+            border: 1px solid #2a2a5e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        select:focus {
+            outline: none;
+            border-color: #64ffda;
+        }
+        .value-display {
+            color: #64ffda;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            font-size: 13px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a8b2d1;
+            font-size: 13px;
+        }
+        input[type="checkbox"] {
+            accent-color: #64ffda;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .controls { flex-direction: column; gap: 12px; }
+            .control-group { justify-content: space-between; }
+            input[type="range"] { width: 100px; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.13/p5.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="p5canvas"></div>
+        <div class="controls">
+            <!-- Easing Type Selection -->
+            <div class="control-group">
+                <label>Easing</label>
+                <select id="easingSelect">
+                    <option value="cubicInflection">Cubic Inflection ⭐</option>
+                    <option value="easeInOutCubic">Ease In-Out Cubic</option>
+                    <option value="easeInOutQuad">Ease In-Out Quad</option>
+                    <option value="easeInOutQuart">Ease In-Out Quart</option>
+                    <option value="easeInOutQuint">Ease In-Out Quint</option>
+                    <option value="easeInOutExpo">Ease In-Out Expo</option>
+                    <option value="easeOutBack">Ease Out Back</option>
+                    <option value="easeInOutElastic">Ease In-Out Elastic</option>
+                </select>
+            </div>
+            
+            <!-- Speed Control -->
+            <div class="control-group">
+                <label>Speed</label>
+                <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1">
+                <span class="value-display" id="speedValue">1.0x</span>
+            </div>
+            
+            <!-- Weight/Inflection Position -->
+            <div class="control-group">
+                <label>Inflection</label>
+                <input type="range" id="weightSlider" min="0.1" max="0.9" step="0.05" value="0.5">
+                <span class="value-display" id="weightValue">0.50</span>
+            </div>
+            
+            <!-- Show Derivatives -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="showDerivatives" checked>
+                <label for="showDerivatives">Show Derivatives</label>
+            </div>
+            
+            <!-- Show Path -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="showPath" checked>
+                <label for="showPath">Show Path</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // EASING FUNCTIONS LIBRARY
+        // ============================================================
+        
+        const EasingFunctions = {
+            // ⭐ Your Cubic Inflection with triple root!
+            cubicInflection: function(t, weight = 0.5) {
+                let centered = t - weight;
+                return Math.pow(centered, 3) * 4 + weight;
+            },
+            
+            // Standard eases
+            easeInOutCubic: function(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            },
+            
+            easeInOutQuad: function(t) {
+                return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            },
+            
+            easeInOutQuart: function(t) {
+                return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+            },
+            
+            easeInOutQuint: function(t) {
+                return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+            },
+            
+            easeInOutExpo: function(t) {
+                return t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+            },
+            
+            easeOutBack: function(t) {
+                const c1 = 1.70158;
+                const c3 = c1 + 1;
+                return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+            },
+            
+            easeInOutElastic: function(t) {
+                const c5 = (2 * Math.PI) / 4.5;
+                return t === 0 ? 0 : t === 1 ? 1 : t < 0.5 ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2 : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+            }
+        };
+        
+        // ============================================================
+        // DERIVATIVE CALCULATIONS (Velocity & Acceleration)
+        // ============================================================
+        
+        function calculateDerivatives(easeFn, t, weight = 0.5, dt = 0.001) {
+            // Position
+            const pos = easeFn(t, weight);
+            
+            // Velocity (1st derivative using central difference)
+            const posForward = easeFn(Math.min(t + dt, 1), weight);
+            const posBackward = easeFn(Math.max(t - dt, 0), weight);
+            const vel = (posForward - posBackward) / (2 * dt);
+            
+            // Acceleration (2nd derivative)
+            const velForward = (easeFn(Math.min(t + 2*dt, 1), weight) - easeFn(Math.min(t + dt, 1), weight)) / dt;
+            const velBackward = (easeFn(Math.max(t - dt, 0), weight) - easeFn(Math.max(t - 2*dt, 0), weight)) / dt;
+            const acc = (velForward - velBackward) / (2 * dt);
+            
+            return { position: pos, velocity: vel, acceleration: acc };
+        }
+        
+        // ============================================================
+        // P5.JS SKETCH
+        // ============================================================
+        
+        let easingType = 'cubicInflection';
+        let speed = 1.0;
+        let weight = 0.5;
+        let showDerivatives = true;
+        let showPath = true;
+        
+        // DOM elements
+        const easingSelect = document.getElementById('easingSelect');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const weightSlider = document.getElementById('weightSlider');
+        const weightValue = document.getElementById('weightValue');
+        const showDerivativesCheck = document.getElementById('showDerivatives');
+        const showPathCheck = document.getElementById('showPath');
+        
+        // Setup event listeners
+        easingSelect.addEventListener('change', (e) => { easingType = e.target.value; });
+        speedSlider.addEventListener('input', (e) => { 
+            speed = parseFloat(e.target.value);
+            speedValue.textContent = speed.toFixed(1) + 'x';
+        });
+        weightSlider.addEventListener('input', (e) => {
+            weight = parseFloat(e.target.value);
+            weightValue.textContent = weight.toFixed(2);
+        });
+        showDerivativesCheck.addEventListener('change', (e) => { showDerivatives = e.target.checked; });
+        showPathCheck.addEventListener('change', (e) => { showPath = e.target.checked; });
+        
+        function setup() {
+            const canvas = createCanvas(900, 500);
+            canvas.parent('p5canvas');
+            pixelDensity(1);
+            textSize(12);
+            textFont('Segoe UI, sans-serif');
+        }
+        
+        function draw() {
+            background(15, 15, 35);
+            
+            // --- Animation time ---
+            let t = (frameCount * 0.008 * speed) % 1.0;
+            const easeFn = EasingFunctions[easingType];
+            const isWeighted = easingType === 'cubicInflection';
+            
+            // Get derivatives
+            const deriv = calculateDerivatives(easeFn, t, weight);
+            const eased = deriv.position;
+            
+            // --- LAYOUT ---
+            const margin = { top: 60, bottom: 40, left: 60, right: 40 };
+            const graphWidth = width - margin.left - margin.right;
+            const graphHeight = 200;
+            const graphY = 40;
+            
+            // --- 1. MAIN ANIMATION CIRCLE ---
+            const circleY = height - 60;
+            const xPos = margin.left + eased * graphWidth;
+            
+            // Color based on velocity
+            const hue = 180 + 40 * (eased > 0.5 ? 1 : 0);
+            const size = 28 + 12 * (1 - abs(t - weight) * 2);
+            const brightness = 60 + 30 * (1 - abs(eased - weight) * 2);
+            
+            // Glow effect
+            noStroke();
+            for (let i = 5; i > 0; i--) {
+                const alpha = 20 / (i + 1);
+                fill(hue, 80, brightness, alpha);
+                circle(xPos, circleY, size + i * 12);
+            }
+            
+            fill(hue, 80, 60);
+            noStroke();
+            circle(xPos, circleY, size);
+            
+            // --- 2. EASING CURVE ---
+            if (showPath) {
+                stroke(100, 100, 200, 80);
+                strokeWeight(2);
+                noFill();
+                beginShape();
+                for (let i = 0; i <= 200; i++) {
+                    let tt = i / 200;
+                    let yy = easeFn(tt, weight);
+                    vertex(margin.left + tt * graphWidth, graphY + graphHeight - yy * graphHeight);
+                }
+                endShape();
+                
+                // Current position on curve
+                let curveY = graphY + graphHeight - eased * graphHeight;
+                stroke(255, 200, 100, 150);
+                strokeWeight(2);
+                line(xPos, circleY, xPos, curveY);
+                fill(255, 200, 100);
+                noStroke();
+                circle(xPos, curveY, 6);
+            }
+            
+            // --- 3. INFLECTION MARKER ---
+            let inflectionX = margin.left + weight * graphWidth;
+            stroke(0, 255, 200, 60);
+            strokeWeight(1);
+            line(inflectionX, graphY, inflectionX, graphY + graphHeight);
+            fill(0, 255, 200, 80);
+            noStroke();
+            circle(inflectionX, graphY + graphHeight - weight * graphHeight, 8);
+            
+            // --- 4. DERIVATIVES (Velocity & Acceleration) ---
+            if (showDerivatives) {
+                // Velocity graph (below main curve)
+                const velHeight = 80;
+                const velY = graphY + graphHeight + 15;
+                const velNorm = map(deriv.velocity, -3, 3, 0, velHeight);
+                const velClamped = constrain(velNorm, 0, velHeight);
+                
+                // Velocity bar
+                fill(100, 255, 150, 80);
+                noStroke();
+                rect(margin.left + 5, velY + velHeight - velClamped, graphWidth - 10, velClamped);
+                
+                // Velocity line
+                stroke(100, 255, 150, 150);
+                strokeWeight(2);
+                line(margin.left, velY + velHeight/2, margin.left + graphWidth, velY + velHeight/2);
+                
+                // Acceleration dot
+                const accHeight = 50;
+                const accY = velY + velHeight + 15;
+                const accNorm = map(deriv.acceleration, -10, 10, 0, accHeight);
+                const accClamped = constrain(accNorm, 0, accHeight);
+                
+                fill(255, 150, 100, 80);
+                noStroke();
+                circle(margin.left + eased * graphWidth, accY + accHeight - accClamped, 8);
+                
+                // Labels
+                fill(100, 255, 150, 180);
+                noStroke();
+                textSize(10);
+                text('Velocity', margin.left + 5, velY - 5);
+                fill(255, 150, 100, 180);
+                text('Acceleration', margin.left + 5, accY - 5);
+            }
+            
+            // --- 5. GRID & LABELS ---
+            stroke(40, 40, 80, 60);
+            strokeWeight(1);
+            // Horizontal grid
+            for (let i = 0; i <= 4; i++) {
+                let yPos = graphY + (i / 4) * graphHeight;
+                line(margin.left, yPos, margin.left + graphWidth, yPos);
+                fill(100, 100, 180, 100);
+                noStroke();
+                textSize(9);
+                text((1 - i/4).toFixed(1), margin.left - 30, yPos + 3);
+            }
+            
+            // Vertical grid
+            for (let i = 0; i <= 10; i++) {
+                let xPos = margin.left + (i / 10) * graphWidth;
+                line(xPos, graphY, xPos, graphY + graphHeight);
+            }
+            
+            // --- 6. INFO DISPLAY ---
+            fill(200, 200, 255, 200);
+            noStroke();
+            textSize(13);
+            textFont('Segoe UI, sans-serif');
+            textAlign(LEFT, TOP);
+            
+            const easingName = easingSelect.options[easingSelect.selectedIndex].text;
+            text('✦ ' + easingName, margin.left, 10);
+            
+            textSize(11);
+            fill(150, 150, 200, 180);
+            text('t: ' + t.toFixed(3), margin.left, 28);
+            text('pos: ' + eased.toFixed(3), margin.left + 120, 28);
+            text('vel: ' + deriv.velocity.toFixed(2), margin.left + 240, 28);
+            text('acc: ' + deriv.acceleration.toFixed(2), margin.left + 360, 28);
+            
+            // --- 7. FOOTER INFO ---
+            fill(80, 80, 140, 100);
+            textSize(10);
+            textAlign(CENTER, BOTTOM);
+            text('Cubic Inflection: triple root at inflection point → zero velocity + zero acceleration', width/2, height - 5);
+        }
+    </script>
+</body>
+</html>
