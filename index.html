@@ -321,9 +321,9 @@
             noStroke();
             circle(xPos, circleY, size);
             
-            // --- 2. EASING CURVE WITH YELLOW POINT ---
+            // --- 2. EASING CURVE WITH YELLOW DOT FOLLOWING THE PATH ---
             if (showPath) {
-                // Draw the easing curve
+                // Draw the easing curve (the S-curve)
                 stroke(100, 100, 200, 80);
                 strokeWeight(2);
                 noFill();
@@ -335,56 +335,59 @@
                 }
                 endShape();
                 
-                // --- YELLOW POINT FOLLOWING CURVE ---
-                let curveX = margin.left + eased * graphWidth;
+                // --- YELLOW DOT FOLLOWING THE CURVE ---
+                // X: follows t (progress along the curve)
+                // Y: follows eased (the curve's output value mapped to height)
+                let curveX = margin.left + t * graphWidth;
                 let curveY = graphY + graphHeight - eased * graphHeight;
                 
-                // Draw trail (behind the point)
-                for (let i = 1; i <= 15; i++) {
-                    let trailT = (t - i * 0.008 * speed) % 1.0;
+                // Draw trail dots along the curve
+                for (let i = 1; i <= 20; i++) {
+                    let trailT = (t - i * 0.01 * speed) % 1.0;
                     if (trailT < 0) trailT += 1.0;
                     let trailEased = easeFn(trailT, weight);
-                    let trailX = margin.left + trailEased * graphWidth;
+                    let trailX = margin.left + trailT * graphWidth;
                     let trailY = graphY + graphHeight - trailEased * graphHeight;
                     
-                    let alpha = map(i, 1, 15, 60, 5);
+                    let alpha = map(i, 1, 20, 80, 3);
                     fill(255, 200, 100, alpha);
                     noStroke();
-                    let dotSize = map(i, 1, 15, 6, 2);
+                    let dotSize = map(i, 1, 20, 7, 2);
                     circle(trailX, trailY, dotSize);
                 }
                 
-                // Glow for yellow point
+                // Glow for yellow dot (3 layers)
                 for (let i = 3; i > 0; i--) {
                     const alpha = 30 / (i + 1);
                     fill(255, 200, 100, alpha);
                     noStroke();
-                    circle(curveX, curveY, 8 + i * 8);
+                    circle(curveX, curveY, 10 + i * 8);
                 }
                 
-                // Main yellow point
+                // Main bright yellow dot (ON THE CURVE)
                 fill(255, 220, 50);
                 noStroke();
-                circle(curveX, curveY, 10);
+                circle(curveX, curveY, 12);
                 
-                // Add a white center dot for clarity
+                // White center for clarity
                 fill(255);
                 noStroke();
-                circle(curveX, curveY, 3);
+                circle(curveX, curveY, 4);
                 
-                // Connection line (dotted)
+                // Connection line from main circle to curve (mapping visualization)
                 stroke(255, 200, 100, 60);
                 strokeWeight(1);
                 drawingContext.setLineDash([4, 6]);
-                line(xPos, circleY, curveX, curveY);
+                let mainCircleX = margin.left + eased * graphWidth;
+                line(mainCircleX, circleY, curveX, curveY);
                 drawingContext.setLineDash([]);
                 
-                // Draw a highlight on the curve from start to current position
-                stroke(255, 200, 100, 40);
-                strokeWeight(3);
+                // Highlight the path traveled on the curve
+                stroke(255, 200, 100, 30);
+                strokeWeight(4);
                 noFill();
                 beginShape();
-                let steps = floor(eased * 200);
+                let steps = floor(t * 200);
                 for (let i = 0; i <= steps; i++) {
                     let tt = i / 200;
                     let yy = easeFn(tt, weight);
