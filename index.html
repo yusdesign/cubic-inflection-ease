@@ -321,7 +321,7 @@
             noStroke();
             circle(xPos, circleY, size);
             
-            // --- 2. EASING CURVE (FIXED) ---
+            // --- 2. EASING CURVE WITH YELLOW POINT ---
             if (showPath) {
                 // Draw the easing curve
                 stroke(100, 100, 200, 80);
@@ -335,26 +335,26 @@
                 }
                 endShape();
                 
-                // --- MOVING YELLOW POINT ON CURVE ---
+                // --- YELLOW POINT FOLLOWING CURVE ---
                 let curveX = margin.left + eased * graphWidth;
                 let curveY = graphY + graphHeight - eased * graphHeight;
                 
-                // Trail dots (drawn BEHIND the main point)
-                for (let i = 1; i <= 12; i++) {
+                // Draw trail (behind the point)
+                for (let i = 1; i <= 15; i++) {
                     let trailT = (t - i * 0.008 * speed) % 1.0;
                     if (trailT < 0) trailT += 1.0;
                     let trailEased = easeFn(trailT, weight);
                     let trailX = margin.left + trailEased * graphWidth;
                     let trailY = graphY + graphHeight - trailEased * graphHeight;
                     
-                    let alpha = map(i, 1, 12, 60, 5);
+                    let alpha = map(i, 1, 15, 60, 5);
                     fill(255, 200, 100, alpha);
                     noStroke();
-                    let dotSize = map(i, 1, 12, 6, 2);
+                    let dotSize = map(i, 1, 15, 6, 2);
                     circle(trailX, trailY, dotSize);
                 }
                 
-                // Glow for yellow point (3 layers)
+                // Glow for yellow point
                 for (let i = 3; i > 0; i--) {
                     const alpha = 30 / (i + 1);
                     fill(255, 200, 100, alpha);
@@ -362,15 +362,37 @@
                     circle(curveX, curveY, 8 + i * 8);
                 }
                 
-                // Main bright yellow point (ON TOP)
+                // Main yellow point
                 fill(255, 220, 50);
                 noStroke();
                 circle(curveX, curveY, 10);
                 
-                // Connection line from circle to curve
-                stroke(255, 200, 100, 120);
-                strokeWeight(1.5);
+                // Add a white center dot for clarity
+                fill(255);
+                noStroke();
+                circle(curveX, curveY, 3);
+                
+                // Connection line (dotted)
+                stroke(255, 200, 100, 60);
+                strokeWeight(1);
+                drawingContext.setLineDash([4, 6]);
                 line(xPos, circleY, curveX, curveY);
+                drawingContext.setLineDash([]);
+                
+                // Draw a highlight on the curve from start to current position
+                stroke(255, 200, 100, 40);
+                strokeWeight(3);
+                noFill();
+                beginShape();
+                let steps = floor(eased * 200);
+                for (let i = 0; i <= steps; i++) {
+                    let tt = i / 200;
+                    let yy = easeFn(tt, weight);
+                    let px = margin.left + tt * graphWidth;
+                    let py = graphY + graphHeight - yy * graphHeight;
+                    vertex(px, py);
+                }
+                endShape();
             }
             
             // --- 3. INFLECTION MARKER ---
