@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEASEFIRE 2.0 - Cubic Inflection - AE Expression Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0d0d1a;
+            color: #c8d0e0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+        }
+        h1 {
+            font-weight: 300;
+            font-size: 2rem;
+            letter-spacing: 1px;
+            color: #64ffda;
+            margin-bottom: 4px;
+        }
+        .sub {
+            color: #6a7a9a;
+            margin-bottom: 28px;
+            border-left: 3px solid #64ffda;
+            padding-left: 16px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+        }
+        @media (max-width: 800px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* PREVIEW CANVAS */
+        .preview-wrap {
+            background: #141425;
+            border-radius: 16px;
+            padding: 18px;
+            border: 1px solid #28284a;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            background: #0a0a18;
+        }
+
+        /* CONTROLS */
+        .controls {
+            background: #141425;
+            border-radius: 16px;
+            padding: 22px;
+            border: 1px solid #28284a;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .ctrl {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .ctrl label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #9aaac8;
+            display: flex;
+            justify-content: space-between;
+        }
+        .ctrl label span {
+            color: #64ffda;
+            font-weight: 600;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #2a2a5e;
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #64ffda;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(100, 255, 218, 0.3);
+        }
+        .row2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* EXPRESSION BOX */
+        .expr-box {
+            background: #0a0a18;
+            border-radius: 12px;
+            padding: 16px 18px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #b0c0e0;
+            border: 1px solid #1e1e3e;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .expr-box .hl {
+            color: #64ffda;
+        }
+        .expr-box .hl2 {
+            color: #f9a87a;
+        }
+        .copy-btn {
+            background: #1e1e3e;
+            border: 1px solid #3a3a6a;
+            color: #c8d0e0;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+            align-self: flex-start;
+        }
+        .copy-btn:hover {
+            background: #2a2a5e;
+            border-color: #64ffda;
+            color: #64ffda;
+        }
+        .badge {
+            background: #1a2a2a;
+            color: #64ffda;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .footer-notes {
+            margin-top: 24px;
+            color: #5a6a8a;
+            font-size: 13px;
+            border-top: 1px solid #1a1a3a;
+            padding-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .footer-notes kbd {
+            background: #1a1a3a;
+            padding: 2px 10px;
+            border-radius: 4px;
+            color: #b0c0e0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✦ cubic inflection · ae expression</h1>
+        <div class="sub">
+            triple-root stationary inflection · zero velocity + zero acceleration at midpoint
+            <span class="badge" style="margin-left:14px;">v1.0</span>
+        </div>
+
+        <div class="grid">
+            <!-- LEFT: PREVIEW -->
+            <div class="preview-wrap">
+                <canvas id="previewCanvas" width="800" height="420"></canvas>
+            </div>
+
+            <!-- RIGHT: CONTROLS + EXPRESSION -->
+            <div class="controls">
+                <div class="ctrl">
+                    <label>inflection weight <span id="weightVal">0.50</span></label>
+                    <input type="range" id="weightSlider" min="0.05" max="0.95" step="0.01" value="0.5" />
+                </div>
+                <div class="row2">
+                    <div class="ctrl">
+                        <label>start <span id="startVal">0</span></label>
+                        <input type="range" id="startSlider" min="-100" max="100" step="1" value="0" />
+                    </div>
+                    <div class="ctrl">
+                        <label>end <span id="endVal">100</span></label>
+                        <input type="range" id="endSlider" min="-100" max="200" step="1" value="100" />
+                    </div>
+                </div>
+                <div class="ctrl">
+                    <label>duration (sec) <span id="durVal">1.0</span></label>
+                    <input type="range" id="durSlider" min="0.2" max="4" step="0.1" value="1" />
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <span style="font-size:13px; color:#7a8aaa;">⬇ copy-paste into any property</span>
+                    <button class="copy-btn" id="copyBtn">📋 copy expression</button>
+                </div>
+
+                <div class="expr-box" id="exprDisplay">
+// === CUBIC INFLECTION EASE ===
+// triple root at weight → zero velocity + zero acceleration
+
+const weight = 0.50;
+const duration = 1.0;
+const startVal = 0;
+const endVal = 100;
+
+const t = Math.min(time / duration, 1);
+const centered = t - weight;
+const eased = Math.pow(centered, 3) * 4 + weight;
+
+linear(eased, 0, 1, startVal, endVal);
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-notes">
+            <span>⚡ <kbd>weight</kbd> = inflection point (0.05–0.95) · where curve crosses with zero slope &amp; curvature</span>
+            <span>📐 <kbd>eased</kbd> = cubic inflection output (0→1) · smooth S-curve with dynamic accent</span>
+            <span>🧠 derivative overlay: <span style="color:#7ae0a0;">velocity</span> · <span style="color:#f9a87a;">acceleration</span></span>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 1. EASING FUNCTION
+        // ============================================================
+        function cubicInflection(t, weight = 0.5) {
+            const centered = t - weight;
+            return Math.pow(centered, 3) * 4 + weight;
+        }
+
+        // ============================================================
+        // 2. DERIVATIVES (central difference)
+        // ============================================================
+        function derivatives(t, weight, dt = 0.001) {
+            const pos = cubicInflection(t, weight);
+            const fwd = cubicInflection(Math.min(t + dt, 1), weight);
+            const bwd = cubicInflection(Math.max(t - dt, 0), weight);
+            const vel = (fwd - bwd) / (2 * dt);
+
+            const fwd2 = cubicInflection(Math.min(t + 2 * dt, 1), weight);
+            const bwd2 = cubicInflection(Math.max(t - 2 * dt, 0), weight);
+            const acc = (fwd2 - 2 * fwd + pos) / (dt * dt);
+            return { pos, vel, acc };
+        }
+
+        // ============================================================
+        // 3. DOM REFS
+        // ============================================================
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const weightSlider = document.getElementById('weightSlider');
+        const weightVal = document.getElementById('weightVal');
+        const startSlider = document.getElementById('startSlider');
+        const startVal = document.getElementById('startVal');
+        const endSlider = document.getElementById('endSlider');
+        const endVal = document.getElementById('endVal');
+        const durSlider = document.getElementById('durSlider');
+        const durVal = document.getElementById('durVal');
+        const exprDisplay = document.getElementById('exprDisplay');
+        const copyBtn = document.getElementById('copyBtn');
+
+        // ============================================================
+        // 4. DRAW FUNCTION
+        // ============================================================
+        function drawPreview() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            const weight = parseFloat(weightSlider.value);
+            const start = parseFloat(startSlider.value);
+            const end = parseFloat(endSlider.value);
+            const duration = parseFloat(durSlider.value);
+
+            // ---- clear ----
+            ctx.clearRect(0, 0, w, h);
+
+            // ---- margins ----
+            const ml = 60,
+                mr = 30,
+                mt = 30,
+                mb = 40;
+            const graphW = w - ml - mr;
+            const graphH = h - mt - mb;
+
+            // ---- grid ----
+            ctx.strokeStyle = '#1e1e3e';
+            ctx.lineWidth = 0.6;
+            for (let i = 0; i <= 10; i++) {
+                const x = ml + (i / 10) * graphW;
+                ctx.beginPath();
+                ctx.moveTo(x, mt);
+                ctx.lineTo(x, mt + graphH);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= 4; i++) {
+                const y = mt + (i / 4) * graphH;
+                ctx.beginPath();
+                ctx.moveTo(ml, y);
+                ctx.lineTo(ml + graphW, y);
+                ctx.stroke();
+            }
+
+            // ---- axes labels ----
+            ctx.fillStyle = '#5a6a8a';
+            ctx.font = '11px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('0', ml, mt + graphH + 18);
+            ctx.fillText('1', ml + graphW, mt + graphH + 18);
+            ctx.textAlign = 'right';
+            ctx.fillText('1.0', ml - 8, mt + 4);
+            ctx.fillText('0.5', ml - 8, mt + graphH / 2 + 4);
+            ctx.fillText('0.0', ml - 8, mt + graphH + 4);
+
+            // ---- inflection marker (vertical line) ----
+            const infX = ml + weight * graphW;
+            ctx.strokeStyle = '#64ffda30';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 6]);
+            ctx.beginPath();
+            ctx.moveTo(infX, mt);
+            ctx.lineTo(infX, mt + graphH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // ---- draw easing curve ----
+            const steps = 300;
+            ctx.strokeStyle = '#64ffda';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const eased = cubicInflection(t, weight);
+                const x = ml + t * graphW;
+                const y = mt + graphH - eased * graphH;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // ---- derivatives (velocity & acceleration) ----
+            // sample at current time = 0.5 (midpoint) for static preview
+            const sampleT = 0.5;
+            const d = derivatives(sampleT, weight);
+
+            // velocity: green bar at bottom
+            const velNorm = Math.min(Math.max(d.vel / 3, -1), 1);
+            const velBarH = 30;
+            const velY = mt + graphH + 6;
+            const velCenter = velY + velBarH / 2;
+            const velLen = velNorm * graphW * 0.4;
+
+            ctx.fillStyle = '#3a6a5a';
+            ctx.fillRect(ml, velY, graphW, velBarH);
+            ctx.fillStyle = '#7ae0a0';
+            ctx.fillRect(ml + graphW / 2 - velLen / 2, velY + 4, velLen, velBarH - 8);
+
+            ctx.fillStyle = '#7ae0a0';
+            ctx.font = '10px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('velocity', ml + 4, velY - 4);
+
+            // acceleration: orange dot
+            const accNorm = Math.min(Math.max(d.acc / 8, -1), 1);
+            const accY = velY + velBarH + 14;
+            const accX = ml + graphW / 2 + accNorm * graphW * 0.35;
+
+            ctx.fillStyle = '#4a3a2a';
+            ctx.beginPath();
+            ctx.arc(ml + graphW / 2, accY, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#f9a87a';
+            ctx.beginPath();
+            ctx.arc(accX, accY, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#f9a87a';
+            ctx.font = '10px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('acceleration', ml + 4, accY + 4);
+
+            // ---- current time indicator (moving dot) ----
+            // We'll animate it on a loop
+            const animT = (performance.now() / 2000) % 1;
+            const easedAnim = cubicInflection(animT, weight);
+            const dotX = ml + animT * graphW;
+            const dotY = mt + graphH - easedAnim * graphH;
+
+            // glow
+            const grad = ctx.createRadialGradient(dotX, dotY, 2, dotX, dotY, 24);
+            grad.addColorStop(0, 'rgba(100,255,218,0.6)');
+            grad.addColorStop(1, 'rgba(100,255,218,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 24, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#64ffda';
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(dotX - 1.5, dotY - 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ---- update expression text ----
+            updateExpression(weight, duration, start, end);
+        }
+
+        // ============================================================
+        // 5. UPDATE EXPRESSION DISPLAY
+        // ============================================================
+        function updateExpression(weight, duration, start, end) {
+            const wStr = weight.toFixed(2);
+            const durStr = duration.toFixed(1);
+            const startStr = start.toFixed(0);
+            const endStr = end.toFixed(0);
+
+            exprDisplay.textContent =
+                `// === CUBIC INFLECTION EASE ===\n` +
+                `// triple root at weight → zero velocity + zero acceleration\n\n` +
+                `const weight = ${wStr};\n` +
+                `const duration = ${durStr};\n` +
+                `const startVal = ${startStr};\n` +
+                `const endVal = ${endStr};\n\n` +
+                `const t = Math.min(time / duration, 1);\n` +
+                `const centered = t - weight;\n` +
+                `const eased = Math.pow(centered, 3) * 4 + weight;\n\n` +
+                `linear(eased, 0, 1, startVal, endVal);`;
+        }
+
+        // ============================================================
+        // 6. COPY BUTTON
+        // ============================================================
+        copyBtn.addEventListener('click', () => {
+            const text = exprDisplay.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.textContent = '✅ copied!';
+                setTimeout(() => (copyBtn.textContent = '📋 copy expression'), 1600);
+            }).catch(() => {
+                // fallback
+                const range = document.createRange();
+                range.selectNode(exprDisplay);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                copyBtn.textContent = '✅ copied!';
+                setTimeout(() => (copyBtn.textContent = '📋 copy expression'), 1600);
+            });
+        });
+
+        // ============================================================
+        // 7. EVENT LISTENERS
+        // ============================================================
+        [weightSlider, startSlider, endSlider, durSlider].forEach(slider => {
+            slider.addEventListener('input', () => {
+                weightVal.textContent = parseFloat(weightSlider.value).toFixed(2);
+                startVal.textContent = parseFloat(startSlider.value).toFixed(0);
+                endVal.textContent = parseFloat(endSlider.value).toFixed(0);
+                durVal.textContent = parseFloat(durSlider.value).toFixed(1);
+                drawPreview();
+            });
+        });
+
+        // ============================================================
+        // 8. ANIMATE LOOP (for moving dot)
+        // ============================================================
+        function animate() {
+            drawPreview();
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================================
+        // 9. START
+        // ============================================================
+        // set initial labels
+        weightVal.textContent = '0.50';
+        startVal.textContent = '0';
+        endVal.textContent = '100';
+        durVal.textContent = '1.0';
+        animate();
+    </script>
+</body>
+</html>
